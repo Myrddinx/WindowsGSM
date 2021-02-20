@@ -54,14 +54,16 @@ namespace WindowsGSM.DiscordBot
                     case "check":
                     case "backup":
                     case "update":
+                    case "oxupdate":
+                    case "aioupdate":
                     case "stats":
                         List<string> serverIds = Configs.GetServerIdsByAdminId(message.Author.Id.ToString());
                         if (splits[0] == "check")
                         {
                             await message.Channel.SendMessageAsync(
                                 serverIds.Contains("0") ?
-                                "You have full permission.\nCommands: `check`, `list`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`" :
-                                $"You have permission on servers (`{string.Join(",", serverIds.ToArray())}`)\nCommands: `check`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`");
+                                "You have full permission.\nCommands: `check`, `list`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`, `oxupdate`, `aioupdate`" :
+                                $"You have permission on servers (`{string.Join(",", serverIds.ToArray())}`)\nCommands: `check`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`, `oxupdate`, `aioupdate`");
                             break;
                         }
 
@@ -79,6 +81,8 @@ namespace WindowsGSM.DiscordBot
                                 case "send": await Action_SendCommand(message, args[1]); break;
                                 case "backup": await Action_Backup(message, args[1]); break;
                                 case "update": await Action_Update(message, args[1]); break;
+                                case "oxupdate": await Action_OxideUpdate(message, args[1]); break;
+                                case "aioupdate": await Action_AIOUpdate(message, args[1]); break;
                                 case "stats": await Action_Stats(message); break;
                             }
                         }
@@ -343,6 +347,84 @@ namespace WindowsGSM.DiscordBot
             }
         }
 
+        private async Task Action_OxideUpdate(SocketMessage message, string command)
+        {
+            string[] args = command.Split(' ');
+            if (args.Length >= 2 && int.TryParse(args[1], out int i))
+            {
+                await Application.Current.Dispatcher.Invoke(async () =>
+                {
+                    MainWindow WindowsGSM = (MainWindow)Application.Current.MainWindow;
+                    if (WindowsGSM.IsServerExist(args[1]))
+                    {
+                        MainWindow.ServerStatus serverStatus = WindowsGSM.GetServerStatus(args[1]);
+                        if (serverStatus == MainWindow.ServerStatus.Stopped)
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) Oxide Update started - this may take some time.");
+                            bool updated = await WindowsGSM.UpdateOxideServerById(args[1], message.Author.Id.ToString(), message.Author.Username);
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) {(updated ? "Oxide Updated" : "Fail to Update Oxide")}.");
+                        }
+                        else if (serverStatus == MainWindow.ServerStatus.Updating)
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) already Updating oxide.");
+                        }
+                        else
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) currently in {serverStatus} state, not able to update oxide.");
+                        }
+                    }
+                    else
+                    {
+                        await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) does not exists.");
+                    }
+                });
+            }
+            else
+            {
+                await message.Channel.SendMessageAsync($"Usage: {Configs.GetBotPrefix()}wgsm oxupdate `<SERVERID>`");
+            }
+        }
+
+
+        private async Task Action_AIOUpdate(SocketMessage message, string command)
+        {
+            string[] args = command.Split(' ');
+            if (args.Length >= 2 && int.TryParse(args[1], out int i))
+            {
+                await Application.Current.Dispatcher.Invoke(async () =>
+                {
+                    MainWindow WindowsGSM = (MainWindow)Application.Current.MainWindow;
+                    if (WindowsGSM.IsServerExist(args[1]))
+                    {
+                        MainWindow.ServerStatus serverStatus = WindowsGSM.GetServerStatus(args[1]);
+                        if (serverStatus == MainWindow.ServerStatus.Stopped)
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) AIO Update started - this may take some time.");
+                            bool updated = await WindowsGSM.UpdateAIOServerById(args[1], message.Author.Id.ToString(), message.Author.Username);
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) {(updated ? "AIO Updated" : "Fail to Update Oxide")}.");
+                        }
+                        else if (serverStatus == MainWindow.ServerStatus.Updating)
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) already Updating oxide.");
+                        }
+                        else
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) currently in {serverStatus} state, not able to update AIO.");
+                        }
+                    }
+                    else
+                    {
+                        await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) does not exists.");
+                    }
+                });
+            }
+            else
+            {
+                await message.Channel.SendMessageAsync($"Usage: {Configs.GetBotPrefix()}wgsm oxupdate `<SERVERID>`");
+            }
+        }
+
+
         private async Task Action_Stats(SocketMessage message)
         {
             var system = new SystemMetrics();
@@ -372,8 +454,8 @@ namespace WindowsGSM.DiscordBot
             };
 
             string prefix = Configs.GetBotPrefix();
-            embed.AddField("Command", $"{prefix}wgsm check\n{prefix}wgsm list\n{prefix}wgsm start <SERVERID>\n{prefix}wgsm stop <SERVERID>\n{prefix}wgsm restart <SERVERID>\n{prefix}wgsm update <SERVERID>\n{prefix}wgsm send <SERVERID> <COMMAND>\n{prefix}wgsm backup <SERVERID>\n{prefix}wgsm stats", inline: true);
-            embed.AddField("Usage", "Check permission\nPrint server list with id, status and name\nStart a server remotely by serverId\nStop a server remotely by serverId\nRestart a server remotely by serverId\nSend a command to server console\nBackup a server remotely by serverId\nUpdate a server remotely by serverId", inline: true);
+            embed.AddField("Command", $"{prefix}wgsm check\n{prefix}wgsm list\n{prefix}wgsm start <SERVERID>\n{prefix}wgsm stop <SERVERID>\n{prefix}wgsm restart <SERVERID>\n{prefix}wgsm update <SERVERID>\n{prefix}wgsm oxupdate <SERVERID>\n\n{prefix}wgsm aioupdate <SERVERID>\n\n{prefix}wgsm send <SERVERID> <COMMAND>\n{prefix}wgsm backup <SERVERID>\n{prefix}wgsm stats", inline: true);
+            embed.AddField("Usage", "Check permission\nPrint server list with id, status and name\nStart a server remotely by serverId\nStop a server remotely by serverId\nRestart a server remotely by serverId\nUpdate a server remotely by serverId\nUpdate a oxide server remotely by serverId\nAIO(Game/Oxide) Update a server remotely by serverId\nSend a command to server console\nBackup a server remotely by serverId", inline: true);
 
             await message.Channel.SendMessageAsync(embed: embed.Build());
         }

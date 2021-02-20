@@ -2125,6 +2125,99 @@ namespace WindowsGSM
 
             return true;
         }
+        private async Task<bool> GameServer_OxideUpdate(ServerTable server, string notes = "", bool validate = false)
+        {
+            if (GetServerMetadata(server.ID).ServerStatus != ServerStatus.Stopped)
+            {
+                return false;
+            }
+
+            bool? existed = InstallAddons.IsOxideModExists(server);
+            if (existed == null)
+            {
+                return false;
+            }
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Updating;
+            Log(server.ID, "Action: Oxide Update" + notes);
+            SetServerStatus(server, "Updating Oxide");
+
+            ProgressDialogController controller = await this.ShowProgressAsync("Installing...", "Please wait...");
+            controller.SetIndeterminate();
+            bool installed = await InstallAddons.OxideMod(server);
+            await controller.CloseAsync();
+
+            Log(server.ID, installed ? $"Installed successfully" : $"Fail to install");
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Stopped;
+            SetServerStatus(server, "Stopped");
+
+            return true;
+
+        }
+
+
+        private async Task<bool> GameServer_UpdateAIO(ServerTable server, string notes = "", bool validate = false)
+        {
+            if (GetServerMetadata(server.ID).ServerStatus != ServerStatus.Stopped)
+            {
+                return false;
+            }
+
+            bool? existed = InstallAddons.IsOxideModExists(server);
+            if (existed == null)
+            {
+                return false;
+            }
+
+            //Begin Update
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Updating;
+            Log(server.ID, "Action: Update" + notes);
+            SetServerStatus(server, "Updating");
+
+            var (p, remoteVersion, gameServer) = await Server_BeginUpdate(server, silenceCheck: validate, forceUpdate: true, validate: validate);
+
+            if (p == null && string.IsNullOrEmpty(gameServer.Error)) // Update success (non-steamcmd server)
+            {
+                Log(server.ID, $"Server: Updated {(validate ? "Validate " : string.Empty)}({remoteVersion})");
+            }
+            else if (p != null) // p stores process of steamcmd
+            {
+                await Task.Run(() => { p.WaitForExit(); });
+                Log(server.ID, $"Server: Updated {(validate ? "Validate " : string.Empty)}({remoteVersion})");
+            }
+            else
+            {
+                Log(server.ID, "Server: Fail to update");
+                Log(server.ID, "[ERROR] " + gameServer.Error);
+            }
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Stopped;
+            SetServerStatus(server, "Stopped");
+
+
+            if (GetServerMetadata(server.ID).ServerStatus != ServerStatus.Stopped)
+            {
+                return false;
+            }
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Updating;
+            Log(server.ID, "Action: Oxide Update" + notes);
+            SetServerStatus(server, "Updating Oxide");
+
+            ProgressDialogController controller = await this.ShowProgressAsync("Installing...", "Please wait...");
+            controller.SetIndeterminate();
+            bool installed = await InstallAddons.OxideMod(server);
+            await controller.CloseAsync();
+
+            Log(server.ID, installed ? $"Installed successfully" : $"Fail to install");
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Stopped;
+            SetServerStatus(server, "Stopped");
+
+            return true;
+
+        }
 
         private async Task<bool> GameServer_Backup(ServerTable server, string notes = "")
         {
@@ -3361,7 +3454,17 @@ namespace WindowsGSM
 
             if (existed == true)
             {
-                await this.ShowMessageAsync(messageTitle, $"Already Installed (ID: {server.ID})");
+                var results = await this.ShowMessageAsync(messageTitle, $"Are you sure you want to update/overwrite? (ID: {server.ID})", MessageDialogStyle.AffirmativeAndNegative);
+                if (results == MessageDialogResult.Affirmative)
+                {
+                    ProgressDialogController controller = await this.ShowProgressAsync("Installing...", "Please wait...");
+                    controller.SetIndeterminate();
+                    bool installed = await InstallAddons.OxideMod(server);
+                    await controller.CloseAsync();
+
+                    string message = installed ? $"Installed successfully" : $"Fail to install";
+                    await this.ShowMessageAsync(messageTitle, $"{message} (ID: {server.ID})");
+                }
                 return;
             }
 
@@ -3376,6 +3479,28 @@ namespace WindowsGSM
                 string message = installed ? $"Installed successfully" : $"Fail to install";
                 await this.ShowMessageAsync(messageTitle, $"{message} (ID: {server.ID})");
             }
+        }
+
+        private async void Tools_UpdateAIO_Click(object sender, RoutedEventArgs e)
+        {
+            var server = (ServerTable)ServerGrid.SelectedItem;
+            if (server == null) { return; }
+
+            string messageTitle = "Tools - AIO Updater";
+
+            bool? existed = InstallAddons.IsOxideModExists(server);
+            if (existed == null)
+            {
+                await this.ShowMessageAsync(messageTitle, $"Doesn't support on {server.Game} (ID: {server.ID})");
+                return;
+            }
+
+            if (GetServerMetadata(server.ID).ServerStatus != ServerStatus.Stopped) { return; }
+
+            MessageBoxResult result = System.Windows.MessageBox.Show("Do you want to AIO update this server? This will update server and install oxide.", "Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) { return; }
+
+            await GameServer_UpdateAIO(server);
         }
         #endregion
 
@@ -3909,6 +4034,26 @@ namespace WindowsGSM
 
             DiscordBotLog($"Discord: Receive UPDATE action | {adminName} ({adminID})");
             await GameServer_Update(server);
+            return GetServerMetadata(server.ID).ServerStatus == ServerStatus.Stopped;
+        }
+
+        public async Task<bool> UpdateOxideServerById(string serverId, string adminID, string adminName)
+        {
+            var server = GetServerTableById(serverId);
+            if (server == null) { return false; }
+
+            DiscordBotLog($"Discord: Receive OXIDE UPDATE action | {adminName} ({adminID})");
+            await GameServer_OxideUpdate(server);
+            return GetServerMetadata(server.ID).ServerStatus == ServerStatus.Stopped;
+        }
+
+        public async Task<bool> UpdateAIOServerById(string serverId, string adminID, string adminName)
+        {
+            var server = GetServerTableById(serverId);
+            if (server == null) { return false; }
+
+            DiscordBotLog($"Discord: Receive OXIDE UPDATE action | {adminName} ({adminID})");
+            await GameServer_UpdateAIO(server);
             return GetServerMetadata(server.ID).ServerStatus == ServerStatus.Stopped;
         }
 

@@ -613,6 +613,7 @@
                     </MenuItem>
                     <MenuItem Header="Tools" Height="30">
                         <MenuItem Header="Global Server List Check" Click="Tools_GlobalServerListCheck_Click"/>
+                        <MenuItem Header="AIO Update" Click="Tools_UpdateAIO_Click"/>
                         <MenuItem Header="Install Addons">
                             <MenuItem Header="AMX Mod X + MetaMod-P" Click="Tool_InstallAMXModXMetamodP_Click">
                                 <MenuItem.Icon>
