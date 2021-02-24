@@ -62,6 +62,17 @@ namespace WindowsGSM.GameServer
             }
 
             string workingDir = Functions.ServerPath.GetServersServerFiles(_serverData.ServerID);
+            string rotate = Functions.ServerPath.GetServersServerFiles(_serverData.ServerID , "rotate.bat");
+
+            if (File.Exists(rotate))
+            {
+                Process proc = new Process();
+                proc.StartInfo.FileName = rotate;
+                proc.StartInfo.WorkingDirectory = workingDir;
+                proc.Start();
+                proc.WaitForExit();
+            }
+
             string srcdsPath = Path.Combine(workingDir, "RustDedicated.exe");
 
             string param = "-nographics -batchmode -silent-crashes";
