@@ -56,14 +56,22 @@ namespace WindowsGSM.DiscordBot
                     case "update":
                     case "oxupdate":
                     case "aioupdate":
+                    case "umodupdate":
+                    case "makepizza":
                     case "stats":
                         List<string> serverIds = Configs.GetServerIdsByAdminId(message.Author.Id.ToString());
                         if (splits[0] == "check")
                         {
                             await message.Channel.SendMessageAsync(
                                 serverIds.Contains("0") ?
-                                "You have full permission.\nCommands: `check`, `list`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`, `oxupdate`, `aioupdate`" :
-                                $"You have permission on servers (`{string.Join(",", serverIds.ToArray())}`)\nCommands: `check`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`, `oxupdate`, `aioupdate`");
+                                "You have full permission.\nCommands: `check`, `list`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`, `oxupdate`, `aioupdate`, `umodupdate`" :
+                                $"You have permission on servers (`{string.Join(",", serverIds.ToArray())}`)\nCommands: `check`, `start`, `stop`, `restart`, `send`, `backup`, `update`, `stats`, `oxupdate`, `aioupdate`, `umodupdate`");
+                            break;
+                        }
+
+                        if (splits[0] == "makepizza")
+                        {
+                            await message.Channel.SendMessageAsync("I dont make pizzas! Call John for pizza!");
                             break;
                         }
 
@@ -83,6 +91,7 @@ namespace WindowsGSM.DiscordBot
                                 case "update": await Action_Update(message, args[1]); break;
                                 case "oxupdate": await Action_OxideUpdate(message, args[1]); break;
                                 case "aioupdate": await Action_AIOUpdate(message, args[1]); break;
+                                case "umodupdate": await Action_UMODUpdate(message, args[1]); break;
                                 case "stats": await Action_Stats(message); break;
                             }
                         }
@@ -410,6 +419,44 @@ namespace WindowsGSM.DiscordBot
                         else
                         {
                             await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) currently in {serverStatus} state, not able to update AIO.");
+                        }
+                    }
+                    else
+                    {
+                        await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) does not exists.");
+                    }
+                });
+            }
+            else
+            {
+                await message.Channel.SendMessageAsync($"Usage: {Configs.GetBotPrefix()}wgsm oxupdate `<SERVERID>`");
+            }
+        }
+
+        private async Task Action_UMODUpdate(SocketMessage message, string command)
+        {
+            string[] args = command.Split(' ');
+            if (args.Length >= 2 && int.TryParse(args[1], out int i))
+            {
+                await Application.Current.Dispatcher.Invoke(async () =>
+                {
+                    MainWindow WindowsGSM = (MainWindow)Application.Current.MainWindow;
+                    if (WindowsGSM.IsServerExist(args[1]))
+                    {
+                        MainWindow.ServerStatus serverStatus = WindowsGSM.GetServerStatus(args[1]);
+                        if (serverStatus == MainWindow.ServerStatus.Stopped)
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) uMod Update started - this may take some time.");
+                            bool updated = await WindowsGSM.UpdateUMODServerById(args[1], message.Author.Id.ToString(), message.Author.Username);
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) {(updated ? "uMod Updated" : "Fail to Update Oxide")}.");
+                        }
+                        else if (serverStatus == MainWindow.ServerStatus.Updating)
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) already Updating umod.");
+                        }
+                        else
+                        {
+                            await message.Channel.SendMessageAsync($"Server (ID: {args[1]}) currently in {serverStatus} state, not able to update umod.");
                         }
                     }
                     else

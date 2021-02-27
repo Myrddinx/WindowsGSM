@@ -5,6 +5,7 @@ using System.Net;
 using System.IO.Compression;
 using Newtonsoft.Json.Linq;
 using System.Linq;
+using System.Diagnostics;
 
 namespace WindowsGSM.Functions
 {
@@ -160,5 +161,46 @@ namespace WindowsGSM.Functions
                 return null;
             }
         }
+
+        public static async Task<bool> UMOD(ServerTable server)
+        {
+            try
+            {
+                Process umod = new Process();
+                umod.StartInfo.FileName = "PowerShell.exe";
+                umod.StartInfo.Arguments = "&powershell -NoProfile -ExecutionPolicy unrestricted -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;&([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing 'https://umod.io/umod-develop.ps1')))\"";
+                umod.Start();
+                umod.WaitForExit();
+
+                string workingDir = ServerPath.GetServersServerFiles(server.ID);
+                if (server.Game.Contains("Valheim"))
+                {
+                    Process proc = new Process();
+                    proc.StartInfo.FileName = "PowerShell.exe";
+                    proc.StartInfo.Arguments = "umod install valheim -P; umod new launcher -P";
+                    proc.StartInfo.WorkingDirectory = workingDir;
+                    proc.Start();
+                    proc.WaitForExit();
+                }
+
+                if (server.Game.Contains("Rust"))
+                {
+                    Process proc = new Process();
+                    proc.StartInfo.FileName = "PowerShell.exe";
+                    proc.StartInfo.Arguments = "umod install rust -P; umod new launcher -P";
+                    proc.StartInfo.WorkingDirectory = workingDir;
+                    proc.Start();
+                    proc.WaitForExit();
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+
+        }
+
     }
 }

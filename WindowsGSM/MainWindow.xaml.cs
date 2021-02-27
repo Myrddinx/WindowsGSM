@@ -2156,6 +2156,30 @@ namespace WindowsGSM
 
         }
 
+        private async Task<bool> GameServer_UMODUpdate(ServerTable server, string notes = "", bool validate = false)
+        {
+            if (GetServerMetadata(server.ID).ServerStatus != ServerStatus.Stopped)
+            {
+                return false;
+            }
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Updating;
+            Log(server.ID, "Action: UMOD Update" + notes);
+            SetServerStatus(server, "Updating UMOD");
+
+            ProgressDialogController controller = await this.ShowProgressAsync("Installing...", "Please wait...");
+            controller.SetIndeterminate();
+            bool installed = await InstallAddons.UMOD(server);
+            await controller.CloseAsync();
+
+            Log(server.ID, installed ? $"Installed successfully" : $"Fail to install");
+
+            _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Stopped;
+            SetServerStatus(server, "Stopped");
+
+            return true;
+
+        }
 
         private async Task<bool> GameServer_UpdateAIO(ServerTable server, string notes = "", bool validate = false)
         {
@@ -3501,38 +3525,12 @@ namespace WindowsGSM
 
                 ProgressDialogController controller = await this.ShowProgressAsync("Installing...", "Please wait...");
                 controller.SetIndeterminate();
-                Process umod = new Process();
-                umod.StartInfo.FileName = "PowerShell.exe";
-                umod.StartInfo.Arguments = "&powershell -NoProfile -ExecutionPolicy unrestricted -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;&([scriptblock]::Create((Invoke-WebRequest -UseBasicParsing 'https://umod.io/umod-develop.ps1')))\"";
-                umod.Start();
-                umod.WaitForExit();
+                bool installed = await InstallAddons.UMOD(server);
                 await controller.CloseAsync();
 
-
-                string workingDir = ServerPath.GetServersServerFiles(server.ID);
-                if (server.Game.Contains("Valheim"))
-                {
-                    Process proc = new Process();
-                    proc.StartInfo.FileName = "PowerShell.exe";
-                    proc.StartInfo.Arguments = "umod install valheim -P; umod new launcher -P";
-                    proc.StartInfo.WorkingDirectory = workingDir;
-                    proc.Start();
-                    proc.WaitForExit();
-                    await this.ShowMessageAsync(messageTitle, $"Installed Succesfully (ID: {server.ID})");
-                }
-
-                if (server.Game.Contains("Rust"))
-                {
-                    Process proc = new Process();
-                    proc.StartInfo.FileName = "PowerShell.exe";
-                    proc.StartInfo.Arguments = "umod install rust -P; umod new launcher -P";
-                    proc.StartInfo.WorkingDirectory = workingDir;
-                    proc.Start();
-                    proc.WaitForExit();
-                    await this.ShowMessageAsync(messageTitle, $"Installed Succesfully (ID: {server.ID})");
-                }
-
                 _serverMetadata[int.Parse(server.ID)].ServerStatus = ServerStatus.Stopped;
+                string message = installed ? $"Installed successfully" : $"Fail to install";
+                await this.ShowMessageAsync(messageTitle, $"{message} (ID: {server.ID})");
                 Log(server.ID, "Action: Install/Update uMOD Complete");
                 SetServerStatus(server, "Stopped");
 
@@ -4096,6 +4094,16 @@ namespace WindowsGSM
             return GetServerMetadata(server.ID).ServerStatus == ServerStatus.Stopped;
         }
 
+        public async Task<bool> UpdateUMODServerById(string serverId, string adminID, string adminName)
+        {
+            var server = GetServerTableById(serverId);
+            if (server == null) { return false; }
+
+            DiscordBotLog($"Discord: Receive OXIDE UPDATE action | {adminName} ({adminID})");
+            await GameServer_UMODUpdate(server);
+            return GetServerMetadata(server.ID).ServerStatus == ServerStatus.Stopped;
+        }
+
         public async Task<bool> UpdateOxideServerById(string serverId, string adminID, string adminName)
         {
             var server = GetServerTableById(serverId);
@@ -4105,7 +4113,6 @@ namespace WindowsGSM
             await GameServer_OxideUpdate(server);
             return GetServerMetadata(server.ID).ServerStatus == ServerStatus.Stopped;
         }
-
         public async Task<bool> UpdateAIOServerById(string serverId, string adminID, string adminName)
         {
             var server = GetServerTableById(serverId);
