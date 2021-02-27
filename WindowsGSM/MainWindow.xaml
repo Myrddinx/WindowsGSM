@@ -635,6 +635,11 @@
                                     <Image Source="/WindowsGSM;component/Images/Tools/OxideMod.ico" Width="23" Margin="3"/>
                                 </MenuItem.Icon>
                             </MenuItem>
+                            <MenuItem Header="uMod" Click="Tools_Install_UMOD_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="/WindowsGSM;component/Images/Tools/Umod.ico" Width="23" Margin="3"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
                         </MenuItem>
                     </MenuItem>
                     <MenuItem Header="Help" Height="30">
