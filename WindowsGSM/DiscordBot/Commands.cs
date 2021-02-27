@@ -501,7 +501,7 @@ namespace WindowsGSM.DiscordBot
             };
 
             string prefix = Configs.GetBotPrefix();
-            embed.AddField("Command", $"{prefix}wgsm check\n{prefix}wgsm list\n{prefix}wgsm start <SERVERID>\n{prefix}wgsm stop <SERVERID>\n{prefix}wgsm restart <SERVERID>\n{prefix}wgsm update <SERVERID>\n{prefix}wgsm oxupdate <SERVERID>\n\n{prefix}wgsm aioupdate <SERVERID>\n\n{prefix}wgsm send <SERVERID> <COMMAND>\n{prefix}wgsm backup <SERVERID>\n{prefix}wgsm stats", inline: true);
+            embed.AddField("Command", $"{prefix}wgsm check\n{prefix}wgsm list\n{prefix}wgsm start <SERVERID>\n{prefix}wgsm stop <SERVERID>\n{prefix}wgsm restart <SERVERID>\n{prefix}wgsm update <SERVERID>\n{prefix}wgsm oxupdate <SERVERID>\n\n{prefix}wgsm aioupdate <SERVERID>\n\n{prefix}wgsm send <SERVERID> <COMMAND>\n{prefix}wgsm backup <SERVERID>\n{prefix}wgsm stats\n{prefix}wgsm umodupdate <SERVERID>", inline: true);
             embed.AddField("Usage", "Check permission\nPrint server list with id, status and name\nStart a server remotely by serverId\nStop a server remotely by serverId\nRestart a server remotely by serverId\nUpdate a server remotely by serverId\nUpdate a oxide server remotely by serverId\nAIO(Game/Oxide) Update a server remotely by serverId\nSend a command to server console\nBackup a server remotely by serverId", inline: true);
 
             await message.Channel.SendMessageAsync(embed: embed.Build());
